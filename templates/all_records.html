@@ -1,0 +1,17 @@
+<ul>
+{% for r in all_records %}
+<li>{{ r[0] }} {{ r[1] }}</li><br>
+{% endfor %}
+</ul>
+
+{% if not all_records %}
+There are no records to show.
+{% endif %}
+
+<div>
+{% for message in get_flashed_messages() %} 
+<strong>*** {{ message }} ***</strong>
+{% endfor %}
+</div>
+
+<a href="{{ url_for('index')}}">Return to add a new record</a>

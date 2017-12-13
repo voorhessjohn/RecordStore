@@ -1,0 +1,31 @@
+
+<div class="page-header">
+    <h1>{% if num_records %}{{ num_records }}{% else %}0{% endif %} records saved. </h1>
+    <p><a href="{{ url_for('see_all') }}">See all records.</a></p>
+</div>
+
+<form method="POST">
+	{{ form.hidden_tag() }}
+	{{ form.catalog_no.label }} {{ form.catalog_no() }}<br>
+	{{ form.artist.label }} {{ form.artist() }}<br>
+    {{ form.title.label }} {{ form.title() }}<br>
+	{{ form.label.label }} {{ form.label() }}<br>
+	{{ form.record_format.label }} {{form.record_format() }}<br>
+	{{ form.rating.label }} {{ form.rating() }}<br>
+	{{ form.released.label }} {{ form.released() }}<br>
+	{{ form.release_id.label }} {{ form.release_id() }}<br>
+	{{ form.collection_folder.label }} {{form.collection_folder() }}<br>
+	{{ form.date_added.label }} {{ form.date_added() }}<br>
+	{{ form.collection_media_condition.label }} {{ form.collection_media_condition() }}<br>
+	{{ form.collection_sleeve_condition.label }} {{ form.collection_sleeve_condition() }}<br>
+	{{ form.collection_notes.label }} {{ form.collection_notes() }}<br>
+	{{ form.price.label }} {{ form.price() }}<br>
+	{{ form.submit() }}<br>
+</form>
+
+<div>
+{% for message in get_flashed_messages() %}
+{{ message }}
+{% endfor %}
+</div>
+
