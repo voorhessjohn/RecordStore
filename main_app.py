@@ -60,6 +60,7 @@ class Sales_Order(db.Model):
     __tablename__ = "sales_orders"
     id = db.Column(db.Integer, primary_key=True)
     record_id = db.Column(db.Integer, db.ForeignKey("records.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     
     def __repr__(self):
         return "Sales Order: {} & URL: {}".format(self.id,self.record_id)
