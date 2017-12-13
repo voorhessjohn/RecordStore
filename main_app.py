@@ -9,7 +9,7 @@ import os
 from flask import Flask, render_template, session, redirect, url_for, flash
 from flask_script import Manager, Shell
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, FileField, IntegerField, DateField, FloatField
+from wtforms import StringField, SubmitField, FileField, IntegerField, DateField, FloatField, BooleanField
 from wtforms.validators import Required
 from flask_sqlalchemy import SQLAlchemy
 import random
@@ -105,6 +105,10 @@ class RecordForm(FlaskForm):
 class UploadForm(FlaskForm):
     file = FileField()
 
+class AddForm(FlaskForm):
+	add = BooleanField("Add to wishlist?")
+	submit = SubmitField('Submit')
+
 def get_or_create_record(
 	db_session, 
 	catalog_no, 
@@ -119,7 +123,8 @@ def get_or_create_record(
 	date_added, 
 	collection_media_condition, 
 	collection_sleeve_condition, 
-	collection_notes
+	collection_notes,
+	price
 	):
     record = db_session.query(Record).filter_by(catalog_no=catalog_no).first()
     if record:
@@ -138,7 +143,8 @@ def get_or_create_record(
         	date_added=date_added, 
         	collection_media_condition=collection_media_condition, 
         	collection_sleeve_condition=collection_sleeve_condition,
-        	collection_notes=collection_notes
+        	collection_notes=collection_notes,
+        	price=price
         	)
         db_session.add(record)
         db_session.commit()
@@ -170,7 +176,8 @@ def index():
             	form.date_added.data, 
             	form.collection_media_condition.data, 
             	form.collection_sleeve_condition.data, 
-            	form.collection_notes.data
+            	form.collection_notes.data,
+            	form.price.data
             	)
     return render_template('index.html', form=form,num_records=num_records)
 
@@ -182,6 +189,21 @@ def see_all():
     	all_records.append((r.title, r.artist))
     
     return render_template('all_records.html',all_records=all_records)
+
+@app.route('/record_view/<catalog_no>', methods=['GET', 'POST'])
+def record_view(catalog_no):
+	form=AddForm()
+	record_dict = {}
+	record = Record.query.filter_by(catalog_no=catalog_no).first()
+	record_dict['catalog_no']=record.catalog_no, 
+	record_dict['artist']=record.artist, 
+	record_dict['title']=record.title,
+	record_dict['label']=record.label, 
+	record_dict['collection_sleeve_condition']=record.collection_sleeve_condition, 
+	record_dict['collection_media_condition']=record.collection_media_condition,
+	record_dict['collection_notes']=record.collection_notes
+	record_dict['price']=record.price
+	return render_template('record_view.html', record_dict=record_dict, form=form)
 
 
 

@@ -1,0 +1,22 @@
+<ul>
+<li>{{ record_dict['catalog_no'][0] }} {{ record_dict['title'][0] }} by {{ record_dict['artist'][0] }}</li><br>
+<li>{{ record_dict['price'] }}</li>
+</ul>
+
+{% if not record_dict %}
+Nothing to show.
+{% endif %}
+
+<form method="POST">
+	{{ form.hidden_tag() }}
+	{{ form.add.label }} {{ form.add() }}
+	{{ form.submit() }}<br>
+</form>
+
+<div>
+{% for message in get_flashed_messages() %} 
+<strong>*** {{ message }} ***</strong>
+{% endfor %}
+</div>
+
+<a href="{{ url_for('see_all')}}">See all records.</a>
