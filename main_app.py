@@ -59,16 +59,16 @@ class User(db.Model):
 class Sales_Order(db.Model):
     __tablename__ = "sales_orders"
     id = db.Column(db.Integer, primary_key=True)
-    record_id = db.Column(db.Integer, db.ForeignKey("records.id"))
+    catalog_no = db.Column(db.Integer, db.ForeignKey("records.catalog_no"))
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     
     def __repr__(self):
-        return "Sales Order: {} & URL: {}".format(self.id,self.record_id)
+        return "Sales Order Line: id-{} catalog_no-{} user_id-{}".format(self.id,self.catalog_no,self.user_id)
 
 class Record(db.Model):
 	__tablename__ = "records"
 	id = db.Column(db.Integer, primary_key=True)
-	catalog_no = db.Column(db.Integer)
+	catalog_no = db.Column(db.Integer, unique=True)
 	artist = db.Column(db.String(255))
 	title = db.Column(db.String(255))
 	label = db.Column(db.String(255))
@@ -107,6 +107,7 @@ class UploadForm(FlaskForm):
     file = FileField()
 
 class AddForm(FlaskForm):
+	user_id = IntegerField("User ID")
 	add = BooleanField("Add to wishlist?")
 	submit = SubmitField('Submit')
 
@@ -151,13 +152,33 @@ def get_or_create_record(
         db_session.commit()
         return record
 
+def get_or_create_sales_order_line(
+	db_session, 
+	catalog_no, 
+	user_id
+	):
+    sales_order_line = db_session.query(Sales_Order).filter_by(catalog_no=catalog_no).first()
+    user = db_session.query(User).filter_by(id=user_id).first()
+    if sales_order_line:
+        return sales_order_line
+    else:
+        sales_order_line = Sales_Order(
+        	catalog_no=catalog_no,
+        	user_id=user.id
+        	)
+        db_session.add(sales_order_line)
+        db_session.commit()
+        return sales_order_line
+
+def get_number_of_records():
+	records = Record.query.all()
+	num_records = len(records)
+	return num_records
 
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    records = Record.query.all()
-    num_records = len(records)
-    print(len(records))
+    num_records = get_number_of_records()
     form = RecordForm()
     if form.validate_on_submit():
         if db.session.query(Record).filter_by(catalog_no=form.catalog_no.data).first(): 
@@ -184,15 +205,16 @@ def index():
 
 @app.route('/all_records')
 def see_all():
-    all_records = []
-    records = Record.query.all()
-    for r in records:
-    	all_records.append((r.title, r.artist))
-    
-    return render_template('all_records.html',all_records=all_records)
+	num_records = get_number_of_records()
+	all_records = []
+	records = Record.query.all()
+	for r in records:
+		all_records.append((r.title, r.artist, r.catalog_no))
+	return render_template('all_records.html',all_records=all_records,num_records=num_records)
 
 @app.route('/record_view/<catalog_no>', methods=['GET', 'POST'])
 def record_view(catalog_no):
+	num_records = get_number_of_records()
 	form=AddForm()
 	record_dict = {}
 	record = Record.query.filter_by(catalog_no=catalog_no).first()
@@ -204,7 +226,33 @@ def record_view(catalog_no):
 	record_dict['collection_media_condition']=record.collection_media_condition,
 	record_dict['collection_notes']=record.collection_notes
 	record_dict['price']=record.price
-	return render_template('record_view.html', record_dict=record_dict, form=form)
+	if form.validate_on_submit():
+		if db.session.query(Sales_Order).filter_by(catalog_no=catalog_no).first(): 
+			flash("You've already saved a record with that catalog number!")
+		else:
+			user_id = form.user_id.data
+			get_or_create_sales_order_line(
+				db.session,
+				catalog_no,
+            	user_id 
+            	)
+			return url_for(wishlist_view(user_id))
+	return render_template('record_view.html', record_dict=record_dict, form=form, num_records=num_records)
+
+@app.route('/wishlist_view/<user_id>', methods=['GET','POST'])
+def wishlist_view(user_id):
+	num_records=get_number_of_records()
+	list_of_sales_order_lines = []
+	sales_order_lines = Sales_Order.query.filter_by(user_id=user_id).all()
+	for line in sales_order_lines:
+		list_of_sales_order_lines.append(line)
+	return render_template(
+		'wishlist_view.html', 
+		user_id=user_id, 
+		list_of_sales_order_lines=list_of_sales_order_lines,
+		num_records=num_records,
+		)
+
 
 
 

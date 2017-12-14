@@ -9,6 +9,7 @@ Nothing to show.
 
 <form method="POST">
 	{{ form.hidden_tag() }}
+	{{ form.user_id.label }}{{ form.user_id() }}
 	{{ form.add.label }} {{ form.add() }}
 	{{ form.submit() }}<br>
 </form>
