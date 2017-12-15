@@ -1,5 +1,10 @@
 <div class="page-header">
     <p>{% if num_records %}{{ num_records }}{% else %}0{% endif %} records</p>
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('logout') }}">Sign Out {{current_user.username}}</a>
+	{% else %}
+    <a href="{{ url_for('login') }}">Sign In</a>
+	{% endif %}
 </div>
 
 <h1>Click the album link to see details or add to your wishlist.</h1>

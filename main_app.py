@@ -6,19 +6,22 @@
 ##################### 
 
 import os
-from flask import Flask, render_template, session, redirect, url_for, flash
+import requests
+import json
+from flask import Flask, render_template, session, redirect, url_for, request, flash
 from flask_script import Manager, Shell
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, FileField, IntegerField, DateField, FloatField, BooleanField
-from wtforms.validators import Required, Email
+from wtforms import StringField, SubmitField, FileField, IntegerField, DateField, FloatField, BooleanField, PasswordField
+from wtforms.validators import Required, Length, Email, Regexp, EqualTo
 from wtforms.fields.html5 import EmailField
 from flask_sqlalchemy import SQLAlchemy
-import random
 from flask_migrate import Migrate, MigrateCommand # needs: pip/pip3 install flask-migrate
 from flask_mail import Mail, Message
 from threading import Thread
 from werkzeug import secure_filename
-from flask_bootstrap import Bootstrap
+from flask_login import LoginManager, login_required, logout_user, login_user, UserMixin, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 # Get some data from another source (an API, BeautifulSoup)
 # At least 4 view functions (not counting error handling) [DONE]
@@ -26,24 +29,25 @@ from flask_bootstrap import Bootstrap
 # 	wishlist_view
 # 	record_view
 # 	upload
-# At least 2 error handling view functions (404 and whatever other real error you want)
-# At least 3 models (database tables)
-# At least 1 one-to-many relationship
-# At least 1 many-to-many relationship with association table
-# At least 2 get_or_create functions to deal with entering data into a database
-# At least 1 form using WTForms
-# At least 2 dynamic links, which can be covered byoa href tags that send data that is processed by the end URL
+# At least 2 error handling view functions (404 and whatever other real error you want) [DONE]
+# At least 3 models (database tables) [DONE]
+# At least 1 one-to-many relationship [DONE]
+# At least 1 many-to-many relationship with association table [DONE]
+# At least 2 get_or_create functions to deal with entering data into a database [DONE]
+# At least 1 form using WTForms [DONE]
+# At least 2 dynamic links, which can be covered by:
+# 	a href tags that send data that is processed by the end URL [DONE]
 # 	using url_for
 # 	using redirect
-# (200 points of the 2500)Use at least one flask extension so that it works:
-# Could be Flask email
-# user authentication
-# file upload
+# (200 points of the 2500) Use at least one flask extension so that it works:
+# 	Could be Flask email
+# 	user authentication
+# 	file upload
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
-Bootstrap(app)
+
 app.debug = True
 app.static_folder = 'static'
 app.config['SECRET_KEY'] = 'hardtoguessstringfromsi364thisisnotsupersecurebutitsok'
@@ -59,6 +63,8 @@ app.config['MAIL_SUBJECT_PREFIX'] = '[Songs App]'
 app.config['MAIL_SENDER'] = 'Admin <>' 
 app.config['ADMIN'] = os.environ.get('ADMIN')
 
+#YOUTUBE_API_KEY = AIzaSyCaViVTsN35aH0PWZxVHFUzrcDLV5SMVcs
+
 
 manager = Manager(app)
 db = SQLAlchemy(app) 
@@ -66,16 +72,39 @@ migrate = Migrate(app, db)
 manager.add_command('db', MigrateCommand) 
 mail = Mail(app) 
 
+login_manager = LoginManager()
+login_manager.session_protection = 'strong'
+login_manager.login_view = 'login'
+login_manager.init_app(app) # set up login manager
+
 sales_order_record = db.Table('sales_order_record',db.Column('sales_order_id',db.Integer, db.ForeignKey('sales_orders.id')),db.Column('record_id',db.Integer, db.ForeignKey('records.id')))
 
-class User(db.Model):
-    __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
-    userName = db.Column(db.String(255))
-    email = db.Column(db.String(255))
-    
-    def __repr__(self):
-        return "User: {} & email: {}".format(self.userName,self.email)
+class User(UserMixin, db.Model):
+	__tablename__ = "users"
+	id = db.Column(db.Integer, primary_key=True)
+	userName = db.Column(db.String(255))
+	email = db.Column(db.String(255))
+	password_hash = db.Column(db.String(128))
+
+	@property
+	def password(self):
+		raise AttributeError('password is not a readable attribute')
+
+	@password.setter
+	def password(self, password):
+		self.password_hash = generate_password_hash(password)
+
+	def verify_password(self, password):
+		return check_password_hash(self.password_hash, password)
+
+	def __repr__(self):
+		return "User: {} & email: {}".format(self.userName,self.email)
+
+## DB load function
+## Necessary for behind the scenes login manager that comes with flask_login capabilities! Won't run without this.
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id)) # returns User object or None
 
 class Sales_Order(db.Model):
     __tablename__ = "sales_orders"
@@ -124,18 +153,46 @@ class RecordForm(FlaskForm):
 	price = FloatField("Price")
 	submit = SubmitField('Submit')
 
-class registrationForm(FlaskForm):
-	userName = StringField("user name", validators=[Required()])
-	email = EmailField("email", validators=[Required()])
-	submit = SubmitField('Submit')
+class RegistrationForm(FlaskForm):
+    email = StringField('Email:', validators=[Required(),Length(1,64),Email()])
+    userName = StringField('Username:',validators=[Required(),Length(1,64),Regexp('^[A-Za-z][A-Za-z0-9_.]*$',0,'Usernames must have only letters, numbers, dots or underscores')])
+    password = PasswordField('Password:',validators=[Required(),EqualTo('password2',message="Passwords must match")])
+    password2 = PasswordField("Confirm Password:",validators=[Required()])
+    submit = SubmitField('Register User')
+
+    #Additional checking methods for the form
+    def validate_email(self,field):
+        if User.query.filter_by(email=field.data).first():
+            raise ValidationError('Email already registered.')
+
+    def validate_username(self,field):
+        if User.query.filter_by(username=field.data).first():
+            raise ValidationError('Username already taken')
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[Required(), Length(1,64), Email()])
+    password = PasswordField('Password', validators=[Required()])
+    remember_me = BooleanField('Keep me logged in')
+    submit = SubmitField('Log In')
 
 class UploadForm(FlaskForm):
     file = FileField()
 
 class AddForm(FlaskForm):
 	user_id = IntegerField("User ID")
-	add = BooleanField("Add to wishlist?")
-	submit = SubmitField('Submit')
+	submit = SubmitField('Add to wishlist')
+
+def getItunesDataByArtistId(artistId):
+	resp = requests.get('https://itunes.apple.com/lookup?id='+str(artistId))
+	data = json.loads(resp.text)
+	return data
+
+def getItunesData(artist):
+	params = {}
+	params['term'] = artist
+	resp = requests.get('https://itunes.apple.com/search?', params = params)
+	data = json.loads(resp.text)
+	return data
 
 def get_or_create_record(
 	db_session, 
@@ -280,6 +337,11 @@ def record_view(catalog_no):
 	record_dict['collection_media_condition']=record.collection_media_condition,
 	record_dict['collection_notes']=record.collection_notes
 	record_dict['price']=record.price
+	itunesdata = getItunesData(record_dict['artist'][0])
+	artistId = itunesdata['results'][0]['artistId']
+	bio_data = getItunesDataByArtistId(artistId)
+	artist_url = bio_data['results'][0]['artistLinkUrl']
+	artist_genre = bio_data['results'][0]['primaryGenreName']
 	if form.validate_on_submit():
 		user_id = form.user_id.data
 		user = db.session.query(User).filter_by(id=user_id).first()
@@ -294,7 +356,14 @@ def record_view(catalog_no):
             	user_id 
             	)
 			user_id = new_sales_order_line.user_id
-	return render_template('record_view.html', record_dict=record_dict, form=form, num_records=num_records)
+	return render_template(
+		'record_view.html', 
+		record_dict=record_dict, 
+		form=form, 
+		num_records=num_records, 
+		artist_url=artist_url, 
+		artist_genre=artist_genre
+		)
 
 @app.route('/wishlist_view/<user_id>', methods=['GET','POST'])
 def wishlist_view(user_id):
@@ -317,25 +386,32 @@ def wishlist_view(user_id):
 
 @app.route('/register', methods=['GET','POST'])
 def register():
-	num_records=get_number_of_records()
-	form=registrationForm()
-	if form.validate_on_submit():
-		userName = form.userName.data
-		email = form.email.data
-		user = db.session.query(User).filter_by(email=email).first()
-		if user:
-			user_id = user.id
-			flash("There's already a user with that email.")
-			return render_template('wishlist_view.html', user_id=user_id)
-		else:
-			new_user = get_or_create_user(
-				db.session,
-				userName,
-            	email 
-            	)
-			user_id = new_user.id
-			# return url_for(wishlist_view)
-	return render_template('register.html', form=form, num_records=num_records)
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(email=form.email.data,userName=form.userName.data,password=form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash('You can now log in!')
+        return redirect(url_for('login'))
+    return render_template('register.html',form=form)
+
+@app.route('/login',methods=["GET","POST"])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user is not None and user.verify_password(form.password.data):
+            login_user(user, form.remember_me.data)
+            return redirect(request.args.get('next') or url_for('index'))
+        flash('Invalid username or password.')
+    return render_template('login.html',form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out')
+    return redirect(url_for('index'))
 
 
 

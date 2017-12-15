@@ -5,9 +5,11 @@
 
 <form method="POST">
 	{{ form.hidden_tag() }}
-	{{ form.userName.label }} {{ form.userName() }}<br>
-	{{ form.email.label }} {{ form.email() }}<br>
-	{{ form.submit() }}<br>
+	{{ form.email.label }} {{ form.email() }}
+	{{ form.userName.label }} {{ form.userName() }}
+    {{ form.password.label }} {{ form.password() }}
+    {{ form.password2.label }} {{ form.password2() }}
+	{{ form.submit.label }}{{ form.submit() }}
 </form>
 
 <div>
