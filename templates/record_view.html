@@ -9,21 +9,20 @@ Nothing to show.
 {% if current_user.is_authenticated %}
 <form method="POST">
 	{{ form.hidden_tag() }}
-	{{ form.user_id.label }}{{ form.user_id() }}
 	{{ form.submit() }}<br>
 </form>
 {% endif %}
 
 <div>
-<p>ITUNES INFORMATION:</p>
-{{ artist_genre }}<br>
-<a href="{{ artist_url }}">See artist info on iTunes</a>
-</div>
-
-<div>
 {% for message in get_flashed_messages() %} 
 <strong>*** {{ message }} ***</strong>
 {% endfor %}
+</div>
+
+<div>
+<p>ITUNES INFORMATION:</p>
+{{ artist_genre }}<br>
+<a href="{{ artist_url }}">See artist info on iTunes</a>
 </div>
 
 <a href="{{ url_for('index')}}">See all records.</a>

@@ -23,7 +23,7 @@ from flask_login import LoginManager, login_required, logout_user, login_user, U
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-# Get some data from another source (an API, BeautifulSoup)
+# Get some data from another source (an API, BeautifulSoup) [DONE]
 # At least 4 view functions (not counting error handling) [DONE]
 # 	index
 # 	wishlist_view
@@ -40,9 +40,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # 	using url_for
 # 	using redirect
 # (200 points of the 2500) Use at least one flask extension so that it works:
-# 	Could be Flask email
-# 	user authentication
+# 	Could be Flask email [DONE]
+# 	user authentication [DONE]
 # 	file upload
+
+# TODO:
+# file upload
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -50,20 +53,20 @@ app = Flask(__name__)
 
 app.debug = True
 app.static_folder = 'static'
-app.config['SECRET_KEY'] = 'hardtoguessstringfromsi364thisisnotsupersecurebutitsok'
+app.config['SECRET_KEY'] = 'qwertyuiopasdfghjklzxcvbnmqpwoeirutyalskdjfhgzmxncbv'
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://localhost/record_store" 
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
 app.config['MAIL_PORT'] = 587 #default
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME') 
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_SUBJECT_PREFIX'] = '[Songs App]'
+app.config['MAIL_SUBJECT_PREFIX'] = '[Record Store App]'
 app.config['MAIL_SENDER'] = 'Admin <>' 
 app.config['ADMIN'] = os.environ.get('ADMIN')
 
-#YOUTUBE_API_KEY = AIzaSyCaViVTsN35aH0PWZxVHFUzrcDLV5SMVcs
 
 
 manager = Manager(app)
@@ -178,9 +181,27 @@ class LoginForm(FlaskForm):
 class UploadForm(FlaskForm):
     file = FileField()
 
+class EmailWishlist(FlaskForm):
+	submit = SubmitField('Email this list to me')
+
 class AddForm(FlaskForm):
-	user_id = IntegerField("User ID")
 	submit = SubmitField('Add to wishlist')
+
+def send_async_email(app, msg):
+	with app.app_context():
+		mail.send(msg)
+
+def send_email(to, subject, template, **kwargs): # kwargs = 'keyword arguments', this syntax means to unpack any keyword arguments into the function in the invocation...
+    msg = Message(app.config['MAIL_SUBJECT_PREFIX'] + ' ' + subject,
+                  sender=app.config['MAIL_SENDER'], recipients=[to])
+    # msg.body = render_template(template + '.txt', **kwargs)
+    msg.html = render_template(template + '.html', **kwargs)
+    thr = Thread(target=send_async_email, args=[app, msg]) # using the async email to make sure the email sending doesn't take up all the "app energy" -- the main thread -- at once
+    thr.start()
+    return thr # The thread being returned
+    # However, if your app sends a LOT of email, it'll be better to set up some additional "queuing" software libraries to handle it. But we don't need to do that yet. Not quite enough users!
+
+
 
 def getItunesDataByArtistId(artistId):
 	resp = requests.get('https://itunes.apple.com/lookup?id='+str(artistId))
@@ -297,6 +318,7 @@ def index():
 	return render_template('index.html',all_records=all_records,num_records=num_records)
 
 @app.route('/add_records_to_db', methods=['GET','POST'])
+@login_required
 def add_records_to_db():
     num_records = get_number_of_records()
     form = RecordForm()
@@ -342,8 +364,9 @@ def record_view(catalog_no):
 	bio_data = getItunesDataByArtistId(artistId)
 	artist_url = bio_data['results'][0]['artistLinkUrl']
 	artist_genre = bio_data['results'][0]['primaryGenreName']
+	print(current_user.id)
 	if form.validate_on_submit():
-		user_id = form.user_id.data
+		user_id = current_user.id
 		user = db.session.query(User).filter_by(id=user_id).first()
 		if db.session.query(Sales_Order).filter_by(catalog_no=catalog_no).filter_by(user_id=user_id).first(): 
 			flash("You've already saved a record with that catalog number!")
@@ -369,19 +392,27 @@ def record_view(catalog_no):
 def wishlist_view(user_id):
 	num_records=get_number_of_records()
 	list_of_sales_order_lines = []
-	
+	form = EmailWishlist()
 	sales_order_lines = Sales_Order.query.filter_by(user_id=user_id).all()
 	if not sales_order_lines:
 		flash("No wishlist items for that user")
-		return url_for(index)
-		
+		return url_for(index)	
 	for line in sales_order_lines:
 		list_of_sales_order_lines.append(line)
+	if form.validate_on_submit():
+		send_email(
+			current_user.email, 
+			'Your Wishlist',
+			'mail/wishlist', 
+			list_of_sales_order_lines=list_of_sales_order_lines
+			)
+		flash("sent email")
 	return render_template(
 		'wishlist_view.html', 
 		user_id=user_id, 
 		list_of_sales_order_lines=list_of_sales_order_lines,
-		num_records=num_records
+		num_records=num_records,
+		form=form
 		)
 
 @app.route('/register', methods=['GET','POST'])

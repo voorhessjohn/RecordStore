@@ -9,7 +9,10 @@
 	<li>{{ item }}</li><br>
 {% endfor %}
 </ul>
-
+<form method="POST">
+	{{ form.hidden_tag() }}
+	{{ form.submit() }}<br>
+</form>
 
 
 <div>

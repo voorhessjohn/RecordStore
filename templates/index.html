@@ -1,6 +1,7 @@
 <div class="page-header">
     <p>{% if num_records %}{{ num_records }}{% else %}0{% endif %} records</p>
     {% if current_user.is_authenticated %}
+    <a href="/wishlist_view/{{current_user.id}}">View Wishlist {{current_user.username}}</a><br>
     <a href="{{ url_for('logout') }}">Sign Out {{current_user.username}}</a>
 	{% else %}
     <a href="{{ url_for('login') }}">Sign In</a>
