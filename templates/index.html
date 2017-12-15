@@ -1,31 +1,22 @@
-
 <div class="page-header">
-    <h1>{% if num_records %}{{ num_records }}{% else %}0{% endif %} records saved. </h1>
-    <p><a href="{{ url_for('see_all') }}">See all records.</a></p>
+    <p>{% if num_records %}{{ num_records }}{% else %}0{% endif %} records</p>
 </div>
 
-<form method="POST">
-	{{ form.hidden_tag() }}
-	{{ form.catalog_no.label }} {{ form.catalog_no() }}<br>
-	{{ form.artist.label }} {{ form.artist() }}<br>
-    {{ form.title.label }} {{ form.title() }}<br>
-	{{ form.label.label }} {{ form.label() }}<br>
-	{{ form.record_format.label }} {{form.record_format() }}<br>
-	{{ form.rating.label }} {{ form.rating() }}<br>
-	{{ form.released.label }} {{ form.released() }}<br>
-	{{ form.release_id.label }} {{ form.release_id() }}<br>
-	{{ form.collection_folder.label }} {{form.collection_folder() }}<br>
-	{{ form.date_added.label }} {{ form.date_added() }}<br>
-	{{ form.collection_media_condition.label }} {{ form.collection_media_condition() }}<br>
-	{{ form.collection_sleeve_condition.label }} {{ form.collection_sleeve_condition() }}<br>
-	{{ form.collection_notes.label }} {{ form.collection_notes() }}<br>
-	{{ form.price.label }} {{ form.price() }}<br>
-	{{ form.submit() }}<br>
-</form>
+<h1>Click the album link to see details or add to your wishlist.</h1>
+<ul>
+{% for r in all_records %}
+<li><a href='/record_view/{{ r[2] }}'><h3>{{ r[0] }} by {{ r[1] }}</h3> </a></li><br>
+{% endfor %}
+</ul>
+
+{% if not all_records %}
+There are no records to show.
+{% endif %}
 
 <div>
-{% for message in get_flashed_messages() %}
-{{ message }}
+{% for message in get_flashed_messages() %} 
+<strong>*** {{ message }} ***</strong>
 {% endfor %}
 </div>
 
+<a href="{{ url_for('add_records_to_db')}}">Add records to database</a>

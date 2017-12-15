@@ -1,7 +1,5 @@
-{% block title %}Flasky - Internal Server Error{% endblock %}
-
-{% block page_content %}
+{% block title %}We've Got A Problem{% endblock %}
 <div class="page-header">
-    <h1>Internal Server Error</h1>
+	<h1>Server Error</h1>    
+	<p><a href="{{ url_for('see_all') }}">See all records.</a></p>
 </div>
-{% endblock %}
