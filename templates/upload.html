@@ -1,12 +1,26 @@
-<html>
-<head>
 <title>Upload</title>
-</head>
-<body>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<div class=page>
+<div class=metanav>
+    <p>{% if num_records %}{{ num_records }}{% else %}0{% endif %} records</p>
+    <a href="{{ url_for('index')}}">See all records.</a><br>
+    {% if current_user.is_authenticated %}
+    <a href="/wishlist_view/{{current_user.id}}">View Wishlist {{current_user.username}}</a><br>
+    <a href="{{ url_for('add_records_to_db')}}">Add records to database</a><br>
+    <a href="{{ url_for('logout') }}">Sign Out {{current_user.username}}</a>
+	{% else %}
+    <a href="{{ url_for('login') }}">Sign In</a>
+	{% endif %}
+</div>
+<br>
 <form method="post" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     {{ form.file }}
     <input type="submit">
 </form>
-</body>
-</html>
+
+<div class=flash>
+{% for message in get_flashed_messages() %} 
+<strong>*** {{ message }} ***</strong>
+{% endfor %}
+</div>

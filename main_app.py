@@ -163,7 +163,6 @@ class RegistrationForm(FlaskForm):
     password2 = PasswordField("Confirm Password:",validators=[Required()])
     submit = SubmitField('Register User')
 
-    #Additional checking methods for the form
     def validate_email(self,field):
         if User.query.filter_by(email=field.data).first():
             raise ValidationError('Email already registered.')
@@ -191,18 +190,14 @@ def send_async_email(app, msg):
 	with app.app_context():
 		mail.send(msg)
 
-def send_email(to, subject, template, **kwargs): # kwargs = 'keyword arguments', this syntax means to unpack any keyword arguments into the function in the invocation...
+def send_email(to, subject, template, **kwargs): 
     msg = Message(app.config['MAIL_SUBJECT_PREFIX'] + ' ' + subject,
                   sender=app.config['MAIL_SENDER'], recipients=[to])
-    # msg.body = render_template(template + '.txt', **kwargs)
     msg.html = render_template(template + '.html', **kwargs)
-    thr = Thread(target=send_async_email, args=[app, msg]) # using the async email to make sure the email sending doesn't take up all the "app energy" -- the main thread -- at once
+    thr = Thread(target=send_async_email, args=[app, msg]) 
     thr.start()
-    return thr # The thread being returned
-    # However, if your app sends a LOT of email, it'll be better to set up some additional "queuing" software libraries to handle it. But we don't need to do that yet. Not quite enough users!
-
-
-
+    return thr 
+    
 def getItunesDataByArtistId(artistId):
 	resp = requests.get('https://itunes.apple.com/lookup?id='+str(artistId))
 	data = json.loads(resp.text)
@@ -214,6 +209,41 @@ def getItunesData(artist):
 	resp = requests.get('https://itunes.apple.com/search?', params = params)
 	data = json.loads(resp.text)
 	return data
+
+# https://stackoverflow.com/questions/31394998/using-sqlalchemy-to-load-csv-file-into-a-database
+def Load_Data(file_name):
+	data = genfromtxt(file_name, delimiter=',', skip_header=1, converters={0: lambda s: str(s)})
+	return data.tolist()
+
+def insert_csv(db_session,file_path):
+	try:
+		file_name = file_path 
+		data = Load_Data(file_name)
+		
+
+		for i in data:
+			record = Record(**{
+				'catalog_no' : datetime.strptime(i[0], '%d-%b-%y').date(),
+				'artist' : i[1],
+				'title' : i[2],
+				'label' : i[3],
+				'record_format' : i[4],
+				'rating' : i[5],
+				'released' : i[6],
+				'release_id' : i[7],
+				'collection_folder' : i[8],
+				'date_added' : i[9],
+				'collection_media_condition' : i[10],
+				'collection_sleeve_condition' : i[11],
+				'collection_notes' : i[12],
+				'price' : i[13]
+				})
+			db_session.add(record) #Add all the records
+		db_session.commit() #Attempt to commit all the records
+		flash("insert succeeded.")
+	except:
+		flash("insert failed.")
+		db_session.rollback() #Rollback the changes on error
 
 def get_or_create_record(
 	db_session, 
@@ -293,7 +323,6 @@ def get_or_create_user(
 		flash("user added.")
 		return user
 	
-
 def get_number_of_records():
 	records = Record.query.all()
 	num_records = len(records)
@@ -428,14 +457,15 @@ def register():
 
 @app.route('/login',methods=["GET","POST"])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user is not None and user.verify_password(form.password.data):
-            login_user(user, form.remember_me.data)
-            return redirect(request.args.get('next') or url_for('index'))
-        flash('Invalid username or password.')
-    return render_template('login.html',form=form)
+	num_records = get_number_of_records()
+	form = LoginForm()
+	if form.validate_on_submit():
+		user = User.query.filter_by(email=form.email.data).first()
+		if user is not None and user.verify_password(form.password.data):
+			login_user(user, form.remember_me.data)
+			return redirect(request.args.get('next') or url_for('index'))
+			flash('Invalid username or password.')
+	return render_template('login.html',form=form, num_records=num_records)
 
 @app.route('/logout')
 @login_required
@@ -444,8 +474,16 @@ def logout():
     flash('You have been logged out')
     return redirect(url_for('index'))
 
-
-
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
+	num_records = get_number_of_records()
+	form = UploadForm()
+	if form.validate_on_submit():
+		filename = secure_filename(form.file.data.filename)
+		form.file.data.save('static/' + filename)
+		insert_csv(db.session,'static/' + filename) 
+		return redirect(url_for('upload'))
+	return render_template('upload.html', form=form, num_records=num_records)
 
 if __name__ == '__main__':
     db.create_all()

@@ -1,17 +1,33 @@
+<title>Login</title>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<div class=page>
+<div class=metanav>
+    <p>{% if num_records %}{{ num_records }}{% else %}0{% endif %} records</p>
+    <a href="{{ url_for('index')}}">See all records.</a><br>
+    {% if current_user.is_authenticated %}
+    <a href="/wishlist_view/{{current_user.id}}">View Wishlist {{current_user.username}}</a><br>
+    <a href="{{ url_for('add_records_to_db')}}">Add records to database</a><br>
+    <a href="{{ url_for('logout') }}">Sign Out {{current_user.username}}</a>
+	{% else %}
+    <a href="{{ url_for('login') }}">Sign In</a>
+	{% endif %}
+</div>
+
+
 <h1>Login</h1>
 
-<div>
+<div class=flash>
 {% for message in get_flashed_messages() %}
 {{ message }}
 {% endfor %}
 </div>
 
-
 <form method="POST">
 	{{ form.hidden_tag() }}
-	{{ form.email.label }} {{ form.email() }}
-	{{ form.password.label }} {{ form.password() }}
+	{{ form.email.label }} {{ form.email() }}<br>
+	{{ form.password.label }} {{ form.password() }}<br>
 	{{ form.submit.label }}{{ form.submit() }}
 </form>
 
 <a href="{{ url_for('register') }}">Register Here</a>
+</div>
