@@ -55,7 +55,7 @@ app = Flask(__name__)
 app.debug = True
 app.static_folder = 'static'
 app.config['SECRET_KEY'] = 'qwertyuiopasdfghjklzxcvbnmqpwoeirutyalskdjfhgzmxncbv'
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://localhost/record_store" 
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL') or "postgresql://localhost/record_store"
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -67,6 +67,7 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_SUBJECT_PREFIX'] = '[Record Store App]'
 app.config['MAIL_SENDER'] = 'Admin <>' 
 app.config['ADMIN'] = os.environ.get('ADMIN')
+app.config['HEROKU_ON'] = os.environ.get('HEROKU')
 
 
 
