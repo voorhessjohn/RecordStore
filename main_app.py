@@ -8,6 +8,7 @@
 import os
 import requests
 import json
+import csv
 from flask import Flask, render_template, session, redirect, url_for, request, flash
 from flask_script import Manager, Shell
 from flask_wtf import FlaskForm
@@ -215,12 +216,17 @@ def Load_Data(file_name):
 	return data.tolist()
 
 def insert_csv(db_session,file_path):
-	try:
-		file_name = file_path 
-		data = Load_Data(file_name)
+	file_name = file_path 
+	print('file_name = '+file_name)
 		
+	with open(file_name, 'r') as f:
+		reader = csv.reader(f)
+		your_list = list(reader)
 
-		for i in data:
+	print(your_list)
+		
+	try:
+		for i in your_list:
 			record = Record(**{
 				'catalog_no' : i[0],
 				'artist' : i[1],
@@ -237,6 +243,7 @@ def insert_csv(db_session,file_path):
 				'collection_notes' : i[12],
 				'price' : i[13]
 				})
+			# print(record)
 			db_session.add(record) #Add all the records
 		db_session.commit() #Attempt to commit all the records
 		flash("insert succeeded.")
