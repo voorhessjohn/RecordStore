@@ -188,7 +188,7 @@ class AddForm(FlaskForm):
 	submit = SubmitField('Add to wishlist')
 
 def make_shell_context():
-    return dict( app=app, db=db)
+    return dict( app=app, db=db, Record=Record, User=User, Sales_Order=Sales_Order)
 
 def send_async_email(app, msg):
 	with app.app_context():
