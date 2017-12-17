@@ -26,10 +26,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # Get some data from another source (an API, BeautifulSoup) [DONE]
 # At least 4 view functions (not counting error handling) [DONE]
-# 	index
-# 	wishlist_view
-# 	record_view
-# 	upload
 # At least 2 error handling view functions (404 and whatever other real error you want) [DONE]
 # At least 3 models (database tables) [DONE]
 # At least 1 one-to-many relationship [DONE]
@@ -38,15 +34,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # At least 1 form using WTForms [DONE]
 # At least 2 dynamic links, which can be covered by:
 # 	a href tags that send data that is processed by the end URL [DONE]
-# 	using url_for
-# 	using redirect
+# 	using url_for [DONE]
+# 	using redirect [DONE]
 # (200 points of the 2500) Use at least one flask extension so that it works:
 # 	Could be Flask email [DONE]
 # 	user authentication [DONE]
-# 	file upload
+# 	file upload [DONE]
 
-# TODO:
-# file upload
+
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
