@@ -191,6 +191,8 @@ class AddForm(FlaskForm):
 def make_shell_context():
     return dict( app=app, db=db, Record=Record, User=User, Sales_Order=Sales_Order)
 
+manager.add_command("shell", Shell(make_context=make_shell_context))
+
 def send_async_email(app, msg):
 	with app.app_context():
 		mail.send(msg)
