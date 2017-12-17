@@ -5,10 +5,9 @@
 <!-- <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/base-min.css"> -->
 <div class=page>
 <body>
-<header>
-	<h1>Wishlist</h1>
+<header>	
 <div class=metanav>
-	
+	<div class=nav><h1>Record Store</h1></div>
     <p>{% if num_records %}{{ num_records }}{% else %}0{% endif %} records</p>
     <a href="{{ url_for('index')}}">See all records.</a><br>
     {% if current_user.is_authenticated %}
@@ -20,9 +19,9 @@
 	{% endif %}
 </div>
 </header>
-</body>
 
 
+<div class=entries>
 <h1>Wishlist for user number {{ user_id }}</h1>
 <ul>
 {% for item in list_of_sales_order_lines %}
@@ -33,12 +32,14 @@
 	{{ form.hidden_tag() }}
 	{{ form.submit() }}<br>
 </form>
+</div>
 <div class=flash>
 {% for message in get_flashed_messages() %} 
 <strong>*** {{ message }} ***</strong>
 {% endfor %}
 </div>
 </div>
+</body>
 
 
 

@@ -1,5 +1,5 @@
 #####################
-#
+# John Voorhess
 # Record Store App
 # SI364 Final Project
 #
@@ -15,7 +15,7 @@ from wtforms import StringField, SubmitField, FileField, IntegerField, DateField
 from wtforms.validators import Required, Length, Email, Regexp, EqualTo
 from wtforms.fields.html5 import EmailField
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate, MigrateCommand # needs: pip/pip3 install flask-migrate
+from flask_migrate import Migrate, MigrateCommand 
 from flask_mail import Mail, Message
 from threading import Thread
 from werkzeug import secure_filename
@@ -78,7 +78,7 @@ mail = Mail(app)
 login_manager = LoginManager()
 login_manager.session_protection = 'strong'
 login_manager.login_view = 'login'
-login_manager.init_app(app) # set up login manager
+login_manager.init_app(app) 
 
 sales_order_record = db.Table('sales_order_record',db.Column('sales_order_id',db.Integer, db.ForeignKey('sales_orders.id')),db.Column('record_id',db.Integer, db.ForeignKey('records.id')))
 
@@ -103,16 +103,15 @@ class User(UserMixin, db.Model):
 	def __repr__(self):
 		return "User: {} & email: {}".format(self.userName,self.email)
 
-## DB load function
-## Necessary for behind the scenes login manager that comes with flask_login capabilities! Won't run without this.
+
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id)) # returns User object or None
+    return User.query.get(int(user_id)) 
 
 class Sales_Order(db.Model):
     __tablename__ = "sales_orders"
     id = db.Column(db.Integer, primary_key=True)
-    catalog_no = db.Column(db.Integer, db.ForeignKey("records.catalog_no"))
+    catalog_no = db.Column(db.String(255), db.ForeignKey("records.catalog_no"))
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     
     def __repr__(self):
@@ -121,39 +120,39 @@ class Sales_Order(db.Model):
 class Record(db.Model):
 	__tablename__ = "records"
 	id = db.Column(db.Integer, primary_key=True)
-	catalog_no = db.Column(db.Integer, unique=True)
+	catalog_no = db.Column(db.String(255), unique=True)
 	artist = db.Column(db.String(255))
 	title = db.Column(db.String(255))
 	label = db.Column(db.String(255))
 	record_format = db.Column(db.String(255))
 	rating = db.Column(db.String(255))
-	released = db.Column(db.Date)
+	released = db.Column(db.String(255))
 	release_id = db.Column(db.String(255))
 	collection_folder = db.Column(db.String(255))
-	date_added = db.Column(db.Date)
+	date_added = db.Column(db.String(255))
 	collection_media_condition = db.Column(db.String(255))
 	collection_sleeve_condition = db.Column(db.String(255))
 	collection_notes = db.Column(db.String(255))
-	price = db.Column(db.Float)
+	price = db.Column(db.String(255))
 
 	def __repr__(self):
 		return "Record: Item Number:{} {} by {} {}".format(self.id,self.title,self.artist,self.price)
 
 class RecordForm(FlaskForm):
-	catalog_no = IntegerField("Catalog Number")
+	catalog_no = StringField("Catalog Number")
 	artist = StringField("Artist")
 	title = StringField("Title")
 	label = StringField("Label")
 	record_format = StringField("Format")
 	rating = StringField("Rating")
-	released = DateField("Date")
-	release_id = IntegerField("Release ID")
+	released = StringField("Date")
+	release_id = StringField("Release ID")
 	collection_folder = StringField("Collection Folder")
-	date_added = DateField("Date Added")
+	date_added = StringField("Date Added")
 	collection_media_condition = StringField("Media Condition")
 	collection_sleeve_condition = StringField("Sleeve Condition")
 	collection_notes = StringField("Notes")
-	price = FloatField("Price")
+	price = StringField("Price")
 	submit = SubmitField('Submit')
 
 class RegistrationForm(FlaskForm):
@@ -165,11 +164,11 @@ class RegistrationForm(FlaskForm):
 
     def validate_email(self,field):
         if User.query.filter_by(email=field.data).first():
-            raise ValidationError('Email already registered.')
+            flash('Email already registered.')
 
     def validate_username(self,field):
         if User.query.filter_by(username=field.data).first():
-            raise ValidationError('Username already taken')
+        	flash('Username already taken')
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[Required(), Length(1,64), Email()])
@@ -223,7 +222,7 @@ def insert_csv(db_session,file_path):
 
 		for i in data:
 			record = Record(**{
-				'catalog_no' : datetime.strptime(i[0], '%d-%b-%y').date(),
+				'catalog_no' : i[0],
 				'artist' : i[1],
 				'title' : i[2],
 				'label' : i[3],
@@ -265,6 +264,7 @@ def get_or_create_record(
     record = db_session.query(Record).filter_by(catalog_no=catalog_no).first()
     if record:
         return record
+        flash('record not created')
     else:
         record = Record(
         	catalog_no=catalog_no, 
@@ -283,7 +283,9 @@ def get_or_create_record(
         	price=price
         	)
         db_session.add(record)
+        flash('added')
         db_session.commit()
+        flash('record created')
         return record
 
 def get_or_create_sales_order_line(
@@ -355,23 +357,24 @@ def add_records_to_db():
         if db.session.query(Record).filter_by(catalog_no=form.catalog_no.data).first(): 
             flash("You've already saved a record with that catalog number!")
         else:
-            get_or_create_record(
-            	db.session,
-            	form.catalog_no.data, 
-            	form.artist.data, 
-            	form.title.data, 
-            	form.label.data, 
-            	form.record_format.data,
-            	form.rating.data,
-            	form.released.data,
-            	form.release_id.data, 
-            	form.collection_folder.data,
-            	form.date_added.data, 
-            	form.collection_media_condition.data, 
-            	form.collection_sleeve_condition.data, 
-            	form.collection_notes.data,
-            	form.price.data
-            	)
+	        get_or_create_record(
+	        	db.session,
+	        	form.catalog_no.data, 
+	            form.artist.data, 
+	            form.title.data, 
+	            form.label.data, 
+	            form.record_format.data,
+	            form.rating.data,
+	            form.released.data,
+	            form.release_id.data, 
+	            form.collection_folder.data,
+	            form.date_added.data, 
+	            form.collection_media_condition.data, 
+	            form.collection_sleeve_condition.data, 
+	            form.collection_notes.data,
+	            form.price.data
+	            )
+	        flash('creating.')
     return render_template('add_records_to_db.html', form=form,num_records=num_records)
 
 @app.route('/record_view/<catalog_no>', methods=['GET', 'POST'])
@@ -393,7 +396,6 @@ def record_view(catalog_no):
 	bio_data = getItunesDataByArtistId(artistId)
 	artist_url = bio_data['results'][0]['artistLinkUrl']
 	artist_genre = bio_data['results'][0]['primaryGenreName']
-	print(current_user.id)
 	if form.validate_on_submit():
 		user_id = current_user.id
 		user = db.session.query(User).filter_by(id=user_id).first()
@@ -425,7 +427,11 @@ def wishlist_view(user_id):
 	sales_order_lines = Sales_Order.query.filter_by(user_id=user_id).all()
 	if not sales_order_lines:
 		flash("No wishlist items for that user")
-		return url_for(index)	
+		all_records = []
+		records = Record.query.all()
+		for r in records:
+			all_records.append((r.title, r.artist, r.catalog_no))
+		return render_template('index.html',all_records=all_records,num_records=num_records)
 	for line in sales_order_lines:
 		list_of_sales_order_lines.append(line)
 	if form.validate_on_submit():
