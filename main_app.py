@@ -187,6 +187,7 @@ class EmailWishlist(FlaskForm):
 class AddForm(FlaskForm):
 	submit = SubmitField('Add to wishlist')
 
+# make shell context
 def make_shell_context():
     return dict( app=app, db=db, Record=Record, User=User, Sales_Order=Sales_Order)
 
